@@ -1217,39 +1217,42 @@ with gr.Blocks(title="Trackio Dashboard", css=css, head=javascript) as demo:
                         metric_df = master_df.dropna(subset=[metric_name])
                         if not metric_df.empty:
                             value = metric_df[metric_name]
-                            first_value = value.iloc[0]
-                            if (
-                                isinstance(first_value, dict)
-                                and "_type" in first_value
-                                and first_value["_type"] == Table.TYPE
-                            ):
+                            valid_entries = [
+                                entry
+                                for entry in value
+                                if isinstance(entry, dict)
+                                and entry.get("_type") == Table.TYPE
+                                and entry.get("_value") is not None
+                            ]
+                            if valid_entries:
                                 try:
                                     with gr.Column():
                                         s = gr.Slider(
-                                            value=len(value),
+                                            value=len(valid_entries),
                                             minimum=1,
-                                            maximum=len(value),
+                                            maximum=len(valid_entries),
                                             step=1,
                                             container=False,
-                                            visible=len(value) > 1,
+                                            visible=len(valid_entries) > 1,
                                         )
                                         processed_data = Table.to_display_format(
-                                            value.iloc[-1]["_value"]
+                                            valid_entries[-1]["_value"]
                                         )
                                         df = pd.DataFrame(processed_data)
                                         table = gr.DataFrame(
                                             df,
-                                            label=f"{metric_name} (index {len(value)})",
+                                            label=f"{metric_name} (index {len(valid_entries)})",
                                             key=f"table-{metric_idx}",
                                             wrap=True,
                                             datatype="markdown",
                                             preserved_by_key=None,
                                         )
 
-                                        def get_table_at_index(index: int):
-                                            value = metric_df[metric_name]
+                                        def get_table_at_index(index: float):
+                                            index = int(index)
+                                            entry = valid_entries[index - 1]
                                             processed_data = Table.to_display_format(
-                                                value.iloc[index - 1]["_value"]
+                                                entry["_value"]
                                             )
                                             df_ = pd.DataFrame(processed_data)
                                             return gr.Dataframe(
